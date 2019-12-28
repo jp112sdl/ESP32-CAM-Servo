@@ -21,7 +21,7 @@
 
 uint8_t glb_servopos_deg = 0;
 
-void initServo(uint8_t pin) {
+void initServo() {
   ledcSetup(SERVO_PWM_CH, 166, 8);
   ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
   //ledcWrite(SERVO_PWM_CH, SERVER_MIN_DEG);

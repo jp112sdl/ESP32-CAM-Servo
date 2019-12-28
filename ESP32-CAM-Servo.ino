@@ -25,7 +25,7 @@ void setup() {
 
   initCamera();
 
-  initServo(SERVO_PIN);
+  initServo();
 
   initWebServer();
 
