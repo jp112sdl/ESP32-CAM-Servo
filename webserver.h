@@ -27,6 +27,8 @@ static esp_err_t servo_handler(httpd_req_t *req){
   size_t buf_len;
   char*  buf;
 
+  static uint8_t servo_pos_deg = 90;
+
   bool get = false;
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
@@ -38,8 +40,9 @@ static esp_err_t servo_handler(httpd_req_t *req){
           get = true;
           log_v("Getting servo position");
         } else {
-          glb_servopos_deg = atoi(param);
-          log_i("Setting servo position to %udeg",glb_servopos_deg);
+          servo_pos_deg = atoi(param);
+          setServoPos(servo_pos_deg);
+          log_i("Setting servo position to %udeg",servo_pos_deg);
         }
       }
     }
@@ -47,7 +50,7 @@ static esp_err_t servo_handler(httpd_req_t *req){
   }
 
   char str[4];
-  sprintf(str, "%d", glb_servopos_deg);
+  sprintf(str, "%d", servo_pos_deg);
 
   const char * ret = get ? str : "SET SERVOPOS OK";
   httpd_resp_send(req, ret, strlen(ret));

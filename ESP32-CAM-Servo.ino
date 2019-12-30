@@ -34,6 +34,5 @@ void setup() {
 
 void loop() {
   wifiMulti.run();
-  updateServo();
   yield();
 }

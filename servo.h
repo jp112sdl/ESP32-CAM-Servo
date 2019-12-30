@@ -4,34 +4,36 @@
  *  Created on: 26 Dec 2019
  *      Author: jp112sdl
  *
- *      Servo http://pastebin.com/PtqKpd9p
  */
 
 #ifndef SERVO_H_
 #define SERVO_H_
 
-#define SERVO_MAX_DEG   114UL
-#define SERVO_MIN_DEG    13UL   // Minimalwinkel für das Servo
-#define SERVO_MAX_APT    205UL   // Gradzahl um die der Servo verstellt werden kann
+#define SERVO_PWM_CH       4   //PWM Kanal
+#define SERVO_PIN         12   //IO Pin
 
-#define SERVO_PWM_CH    6
-#define SERVO_DELAY_MS 20
+#define SERVO_DEG_MIN      0   //min. Stellwinkel
+#define SERVO_DEG_MAX    180   //max. Stellwinkel
+#define SERVO_DUTY_MIN  2436UL //PWM Duty bei min. Stellwinkel
+#define SERVO_DUTY_MAX  8526UL //PWM Duty bei max. Stellwinkel
 
-#define SERVO_PIN    12
-
-uint8_t glb_servopos_deg = 90;
+void setServoPos(uint8_t deg) {
+  uint32_t duty = map(deg, SERVO_DEG_MIN, SERVO_DEG_MAX, SERVO_DUTY_MIN, SERVO_DUTY_MAX);
+  ledcWrite(SERVO_PWM_CH, duty);
+}
 
 void initServo() {
-  ledcSetup(SERVO_PWM_CH, 166, 8);
+  //ledcSetup(2, 50, 16); //channel, freq, resolution
+  //ledcAttachPin(2, 2); // pin, channel
+
+  ledcSetup(SERVO_PWM_CH, 50, 16);
   ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
+
   delay(100);
+  setServoPos(90);
 }
 
-void updateServo() {
-  uint32_t duty = ((glb_servopos_deg/(SERVO_MAX_APT))*(SERVO_MAX_DEG-SERVO_MIN_DEG)) + SERVO_MIN_DEG;
-  ledcWrite(SERVO_PWM_CH, duty);
-  delay(SERVO_DELAY_MS);
-}
+
 
 
 
