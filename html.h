@@ -31,7 +31,7 @@ const char index_html[] PROGMEM = R"=====(
       <p>
         <button id="reloadBtn" onclick="location.reload();">Aktualisieren</button>
         <button id="srcBtn" onclick="location.href='?show=video';">Video-Ansicht</button>
-        <input type="range" min="0" max="180" value="90" class="slider" id="servoSlider" onchange="SetServoPos(this.value)" />
+        <input type="range" min="180" max="0" value="90" class="slider" id="servoSlider" onchange="SetServoPos(this.value)" />
       </p>
     </div>
 
