@@ -13,13 +13,17 @@
 #include "cam.h"
 #include "servo.h"
 #include "webserver.h"
+#include "ota_srv.h"
 #include "wifi.h"
+
 
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detection
 
   Serial.begin(115200);
+
+  log_i("VER 1.1");
 
   initWifi();
 
@@ -29,10 +33,16 @@ void setup() {
 
   initWebServer();
 
-  log_i("Ready.");
+  xTaskCreate(&ota_server_task, "ota_server_task", 4096, NULL, 5, NULL);
+
+  log_n("Ready.");
 }
+
+
+
 
 void loop() {
   wifiMulti.run();
+  disableServo();
   yield();
 }
