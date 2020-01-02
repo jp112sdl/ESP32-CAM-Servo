@@ -35,40 +35,38 @@ static esp_err_t get_handler(httpd_req_t *req){
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
       char param[20];
       if (httpd_query_key_value(buf, "item", param, sizeof(param)) == ESP_OK) {
-        log_i("get_handler: \"item = \" %s", param);
+        log_i("item = %s", param);
 
         if(!strcmp(param,"servopos"))
-          sprintf(str, "%d", Prefs.getByte(PREFS_KEY_SERVOPOS, 90));
+          sprintf(str, "%d", Servo.getPos());
 
         if(!strcmp(param,"flashlight"))
-          sprintf(str, "%d", Prefs.getByte(PREFS_KEY_USEFLASHLIGHT, 0));
+          sprintf(str, "%d", Cam.getFlashActive());
       }
     }
     free(buf);
   }
 
-  const char * ret = str;
-  httpd_resp_send(req, ret, strlen(ret));
+  log_i("response = %s", str);
+
+  httpd_resp_send(req, str, strlen(str));
   return res;
 }
 
 static esp_err_t set_handler(httpd_req_t *req){
 
-  int framesize = DEFAULT_FRAMESIZE;
-  static int old_framesize = DEFAULT_FRAMESIZE;
-  int brightness = 0;
-  static int old_brightness = 0;
-
   char content[100];
   size_t recv_size = min(req->content_len, sizeof(content));
   int returncode = httpd_req_recv(req, content, recv_size);
   if (returncode <= 0) {
+    log_e("err %u", returncode);
     if (returncode == HTTPD_SOCK_ERR_TIMEOUT) httpd_resp_send_408(req);
     return ESP_FAIL;
   }
 
-  log_i("set_handler: %s", content);
+  log_d("set_handler: %s", content);
 
+  int res = -1;
 
   const char delim[2] = "=";
   if (strchr(content,delim[0])) {
@@ -79,31 +77,46 @@ static esp_err_t set_handler(httpd_req_t *req){
    post = strtok(NULL, delim);
    const char * value = post;
 
-   if (!strcmp(param,"framesize"))   framesize  = atoi(value);
-   if (!strcmp(param,"brightness"))  brightness = atoi(value);
-   if (!strcmp(param,"servopos"))    Servo.setPos(atoi(value));
-   if (!strcmp(param, "flashlight")) Cam.setFlashActive(atoi(value));
+   int val = atoi(value);
 
-   log_i("param = %s, value = %s", param, value);
+   sensor_t * s = esp_camera_sensor_get();
+
+        if (!strcmp(param, "framesize"))      res = s->set_framesize(s,(framesize_t)val); // 0 ... 10
+   else if (!strcmp(param, "quality"))        res = s->set_quality(s, val);
+   else if (!strcmp(param, "contrast"))       res = s->set_contrast(s, val);
+   else if (!strcmp(param, "brightness"))     res = s->set_brightness(s, val);
+   else if (!strcmp(param, "saturation"))     res = s->set_saturation(s, val);
+   else if (!strcmp(param, "gainceiling"))    res = s->set_gainceiling(s, (gainceiling_t)val);
+   else if (!strcmp(param, "colorbar"))       res = s->set_colorbar(s, val);
+   else if (!strcmp(param, "awb"))            res = s->set_whitebal(s, val);
+   else if (!strcmp(param, "agc"))            res = s->set_gain_ctrl(s, val);
+   else if (!strcmp(param, "aec"))            res = s->set_exposure_ctrl(s, val);
+   else if (!strcmp(param, "hmirror"))        res = s->set_hmirror(s, val);
+   else if (!strcmp(param, "vflip"))          res = s->set_vflip(s, val);
+   else if (!strcmp(param, "awb_gain"))       res = s->set_awb_gain(s, val);
+   else if (!strcmp(param, "agc_gain"))       res = s->set_agc_gain(s, val);
+   else if (!strcmp(param, "aec_value"))      res = s->set_aec_value(s, val);
+   else if (!strcmp(param, "aec2"))           res = s->set_aec2(s, val);
+   else if (!strcmp(param, "dcw"))            res = s->set_dcw(s, val);
+   else if (!strcmp(param, "bpc"))            res = s->set_bpc(s, val);
+   else if (!strcmp(param, "wpc"))            res = s->set_wpc(s, val);
+   else if (!strcmp(param, "raw_gma"))        res = s->set_raw_gma(s, val);
+   else if (!strcmp(param, "lenc"))           res = s->set_lenc(s, val);
+   else if (!strcmp(param, "special_effect")) res = s->set_special_effect(s, val);
+   else if (!strcmp(param, "wb_mode"))        res = s->set_wb_mode(s, val);
+   else if (!strcmp(param, "ae_level"))       res = s->set_ae_level(s, val);
+   else if (!strcmp(param, "servopos"))       Servo.setPos(atoi(value));
+   else if (!strcmp(param, "flashlight"))     Cam.setFlashActive(atoi(value));
+
+   log_i("param = %s, value = %s, res = %u", param, value, res);
   }
 
-  if (old_brightness != brightness) {
-    sensor_t * s = esp_camera_sensor_get();
-    log_i("Setting brightness to %u", framesize);
-    s->set_brightness(s,brightness);
-    old_brightness = brightness;
+  if(res == -1){
+    return httpd_resp_send_500(req);
   }
 
-  if (old_framesize != framesize) {
-    sensor_t * s = esp_camera_sensor_get();
-    log_i("Setting framesize to %u", framesize);
-    s->set_framesize(s, (framesize_t)framesize );
-    old_framesize = framesize;
-    delay(framesize * 100);
-  }
-
-  const char * ret = "SET OK";
-  httpd_resp_send(req, ret, strlen(ret));
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, NULL, 0);
   return ESP_OK;
 }
 
@@ -118,8 +131,9 @@ static esp_err_t vid_handler(httpd_req_t *req) {
   if(res != ESP_OK){
     return res;
   }
-  Cam.flashLedOn();
+
   while(true){
+    Cam.flashLedOn();
     fb = esp_camera_fb_get();
 
     if (!fb) {

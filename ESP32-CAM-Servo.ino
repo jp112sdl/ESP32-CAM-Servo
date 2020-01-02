@@ -1,7 +1,6 @@
 #define DEFAULT_FRAMESIZE FRAMESIZE_SXGA
 #define NVS_NAMESPACE     "SETTINGS"
 
-#include <WiFi.h>
 #include <WiFiMulti.h>
 #include "esp_camera.h"
 #include "esp_timer.h"
@@ -18,7 +17,6 @@
 #include "webserver.h"
 #include "ota_srv.h"
 #include "wifi.h"
-
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detection
@@ -42,11 +40,9 @@ void setup() {
   log_n("Ready.");
 }
 
-
-
-
 void loop() {
   if (wifiMulti.run() != WL_CONNECTED) {
+    log_e("WIFI Disconnected. Reconnecting...");
     WiFi.disconnect(false, false);
     wifiMulti.run();
   }

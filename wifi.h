@@ -21,7 +21,6 @@ void initWifi() {
 
   uint8_t connect_counter = 0;
   Serial.print("Connecting Wifi.");
-  WiFi.disconnect();
   WiFi.begin(ssid1, password1);
   while (wifiMulti.run() != WL_CONNECTED) {
     delay(500);

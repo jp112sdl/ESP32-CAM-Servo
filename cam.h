@@ -31,22 +31,32 @@
 class Camera {
 private:
   bool use_flashlight;
+  bool setup;
 public:
-  Camera() : use_flashlight(false) {}
+  Camera() : use_flashlight(false), setup(true) {}
   virtual ~Camera() {}
 
   void setFlashActive(bool a) {
     use_flashlight = a;
     Prefs.putByte(PREFS_KEY_USEFLASHLIGHT, use_flashlight);
+    if (use_flashlight == false) {
+      digitalWrite(FLASH_LED_PIN, LOW);
+    }
+  }
+
+  bool getFlashActive() {
+    return use_flashlight;
   }
 
   void flashLedOn() {
-    if (use_flashlight == true)
+    if (use_flashlight == true || setup == true)
       digitalWrite(FLASH_LED_PIN, HIGH);
+    else
+      digitalWrite(FLASH_LED_PIN, LOW);
   }
 
   void flashLedOff() {
-    if (use_flashlight == true)
+    if (use_flashlight == true || setup == true)
       digitalWrite(FLASH_LED_PIN, LOW);
   }
 
@@ -90,10 +100,11 @@ public:
 
     setFlashActive(Prefs.getByte(PREFS_KEY_USEFLASHLIGHT, 0));
 
-   log_i("Flash LED check...");
+    log_i("Flash LED check...");
     flashLedOn();
-    delay(500);
+    delay(300);
     flashLedOff();
+    setup = false;
   }
 };
 

@@ -31,7 +31,7 @@ public:
   virtual ~ServoControl() {}
 
   void setPos(uint8_t deg) {
-    deg_diff = abs(Prefs.getByte(PREFS_KEY_SERVOPOS, 90) - deg);
+    deg_diff = abs(getPos() - deg);
     Prefs.putByte(PREFS_KEY_SERVOPOS, deg);
     servoMoveStartMillis = millis();
 #ifdef INVERT_SERVO_MOVE
@@ -41,6 +41,10 @@ public:
     ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
     servoPinIsAttached = true;
     ledcWrite(SERVO_PWM_CH, duty);
+  }
+
+  uint8_t getPos() {
+    return Prefs.getByte(PREFS_KEY_SERVOPOS, 90);
   }
 
   void disable() {
@@ -55,8 +59,7 @@ public:
     //ledcAttachPin(2, 2); // pin, channel
     ledcSetup(SERVO_PWM_CH, 50, 16);
 
-    uint8_t savedServoPos = Prefs.getByte(PREFS_KEY_SERVOPOS, 90);
-    setPos(savedServoPos);
+    setPos(getPos());
   }
 
 };
