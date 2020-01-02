@@ -11,7 +11,7 @@
 
 
 #define OTA_LISTEN_PORT 8032
-#define OTA_BUFF_SIZE 1024
+#define OTA_BUFF_SIZE   1024
 
 #include <string.h>
 
@@ -22,9 +22,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lwip/sockets.h"
-
-
-static const char * TAG = "OTA";
 
 /*socket*/
 static int connect_socket = 0;
@@ -130,8 +127,6 @@ void ota_server_start()
             ESP_LOGE(TAG, "Error: recv data error! errno=%d", errno);
             enableCore0WDT();
         }
-
-
     } while (recv_len > 0 && content_received < content_length);
 
     ESP_LOGI(TAG, "Binary transferred finished: %d bytes", content_received);

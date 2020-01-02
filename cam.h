@@ -27,52 +27,76 @@
 #define PCLK_GPIO_NUM     22
 
 #define FLASH_LED_PIN      4
-#define FLASH_LED_PWM_CH   5               // PWM-Kanal Blitz
 
-void initCamera() {
-  // OV2640 camera module
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer   = LEDC_TIMER_0;
-  config.pin_d0       = Y2_GPIO_NUM;
-  config.pin_d1       = Y3_GPIO_NUM;
-  config.pin_d2       = Y4_GPIO_NUM;
-  config.pin_d3       = Y5_GPIO_NUM;
-  config.pin_d4       = Y6_GPIO_NUM;
-  config.pin_d5       = Y7_GPIO_NUM;
-  config.pin_d6       = Y8_GPIO_NUM;
-  config.pin_d7       = Y9_GPIO_NUM;
-  config.pin_xclk     = XCLK_GPIO_NUM;
-  config.pin_pclk     = PCLK_GPIO_NUM;
-  config.pin_vsync    = VSYNC_GPIO_NUM;
-  config.pin_href     = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn     = PWDN_GPIO_NUM;
-  config.pin_reset    = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size   = DEFAULT_FRAMESIZE;
-  config.jpeg_quality = 8;
-  config.fb_count     = 2;
+class Camera {
+private:
+  bool use_flashlight;
+public:
+  Camera() : use_flashlight(false) {}
+  virtual ~Camera() {}
 
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    log_e("Camera init failed with error 0x%x", err);
-    ESP.restart();
+  void setFlashActive(bool a) {
+    use_flashlight = a;
+    Prefs.putByte(PREFS_KEY_USEFLASHLIGHT, use_flashlight);
   }
 
-  sensor_t * s = esp_camera_sensor_get();
-  s->set_brightness(s,1);
+  void flashLedOn() {
+    if (use_flashlight == true)
+      digitalWrite(FLASH_LED_PIN, HIGH);
+  }
 
-  ledcSetup(FLASH_LED_PWM_CH, 500, 8);
-  ledcAttachPin(FLASH_LED_PIN, FLASH_LED_PWM_CH);
-  ledcWrite(FLASH_LED_PWM_CH, 0);
+  void flashLedOff() {
+    if (use_flashlight == true)
+      digitalWrite(FLASH_LED_PIN, LOW);
+  }
 
-  log_i("Flash LED check...");
-  ledcWrite(FLASH_LED_PWM_CH, 255);
-  delay(500);
-  ledcWrite(FLASH_LED_PWM_CH, 0);
-}
+  void init() {
+    // OV2640 camera module
+    camera_config_t config;
+    config.ledc_channel = LEDC_CHANNEL_0;
+    config.ledc_timer   = LEDC_TIMER_0;
+    config.pin_d0       = Y2_GPIO_NUM;
+    config.pin_d1       = Y3_GPIO_NUM;
+    config.pin_d2       = Y4_GPIO_NUM;
+    config.pin_d3       = Y5_GPIO_NUM;
+    config.pin_d4       = Y6_GPIO_NUM;
+    config.pin_d5       = Y7_GPIO_NUM;
+    config.pin_d6       = Y8_GPIO_NUM;
+    config.pin_d7       = Y9_GPIO_NUM;
+    config.pin_xclk     = XCLK_GPIO_NUM;
+    config.pin_pclk     = PCLK_GPIO_NUM;
+    config.pin_vsync    = VSYNC_GPIO_NUM;
+    config.pin_href     = HREF_GPIO_NUM;
+    config.pin_sscb_sda = SIOD_GPIO_NUM;
+    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_pwdn     = PWDN_GPIO_NUM;
+    config.pin_reset    = RESET_GPIO_NUM;
+    config.xclk_freq_hz = 20000000;
+    config.pixel_format = PIXFORMAT_JPEG;
+    config.frame_size   = DEFAULT_FRAMESIZE;
+    config.jpeg_quality = 8;
+    config.fb_count     = 2;
+
+    esp_err_t err = esp_camera_init(&config);
+    if (err != ESP_OK) {
+      log_e("Camera init failed with error 0x%x", err);
+      ESP.restart();
+    }
+
+    sensor_t * s = esp_camera_sensor_get();
+    s->set_brightness(s,1);
+
+    pinMode(FLASH_LED_PIN, OUTPUT);
+
+    setFlashActive(Prefs.getByte(PREFS_KEY_USEFLASHLIGHT, 0));
+
+   log_i("Flash LED check...");
+    flashLedOn();
+    delay(500);
+    flashLedOff();
+  }
+};
+
+Camera Cam;
 
 #endif /* CAM_H_ */

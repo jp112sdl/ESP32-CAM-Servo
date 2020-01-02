@@ -21,44 +21,38 @@ static esp_err_t index_handler(httpd_req_t *req){
   return res;
 }
 
-static esp_err_t servo_handler(httpd_req_t *req){
+static esp_err_t get_handler(httpd_req_t *req){
   esp_err_t res = ESP_OK;
 
   size_t buf_len;
   char*  buf;
 
-  static uint8_t servo_pos_deg = 90;
 
-  bool get = false;
+  char str[4];
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
     buf = (char*)malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-      char param[4];
-      if (httpd_query_key_value(buf, "pos", param, sizeof(param)) == ESP_OK) {
-        if (!strcmp(param,"get")) {
-          get = true;
-          log_v("Getting servo position");
-        } else {
-          servo_pos_deg = atoi(param);
-          setServoPos(servo_pos_deg);
-          log_i("Setting servo position to %udeg",servo_pos_deg);
-        }
+      char param[20];
+      if (httpd_query_key_value(buf, "item", param, sizeof(param)) == ESP_OK) {
+        log_i("get_handler: \"item = \" %s", param);
+
+        if(!strcmp(param,"servopos"))
+          sprintf(str, "%d", Prefs.getByte(PREFS_KEY_SERVOPOS, 90));
+
+        if(!strcmp(param,"flashlight"))
+          sprintf(str, "%d", Prefs.getByte(PREFS_KEY_USEFLASHLIGHT, 0));
       }
     }
     free(buf);
   }
 
-  char str[4];
-  sprintf(str, "%d", servo_pos_deg);
-
-  const char * ret = get ? str : "SET SERVOPOS OK";
+  const char * ret = str;
   httpd_resp_send(req, ret, strlen(ret));
   return res;
 }
 
 static esp_err_t set_handler(httpd_req_t *req){
-  Serial.println("set_handler");
 
   int framesize = DEFAULT_FRAMESIZE;
   static int old_framesize = DEFAULT_FRAMESIZE;
@@ -73,6 +67,9 @@ static esp_err_t set_handler(httpd_req_t *req){
     return ESP_FAIL;
   }
 
+  log_i("set_handler: %s", content);
+
+
   const char delim[2] = "=";
   if (strchr(content,delim[0])) {
    char *post;
@@ -82,8 +79,11 @@ static esp_err_t set_handler(httpd_req_t *req){
    post = strtok(NULL, delim);
    const char * value = post;
 
-   if (!strcmp(param,"framesize"))  framesize  = atoi(value);
-   if (!strcmp(param,"brightness")) brightness = atoi(value);
+   if (!strcmp(param,"framesize"))   framesize  = atoi(value);
+   if (!strcmp(param,"brightness"))  brightness = atoi(value);
+   if (!strcmp(param,"servopos"))    Servo.setPos(atoi(value));
+   if (!strcmp(param, "flashlight")) Cam.setFlashActive(atoi(value));
+
    log_i("param = %s, value = %s", param, value);
   }
 
@@ -118,6 +118,7 @@ static esp_err_t vid_handler(httpd_req_t *req) {
   if(res != ESP_OK){
     return res;
   }
+  Cam.flashLedOn();
   while(true){
     fb = esp_camera_fb_get();
 
@@ -151,6 +152,7 @@ static esp_err_t vid_handler(httpd_req_t *req) {
     }
       //log_i("MJPG: %uB",(uint32_t)(fb_buf_len));
   }
+  Cam.flashLedOff();
   return res;
 }
 
@@ -160,6 +162,10 @@ static esp_err_t pic_handler(httpd_req_t *req){
     size_t fb_buf_len = 0;
 
     int64_t fr_start  = esp_timer_get_time();
+
+    Cam.flashLedOn();
+
+    delay(100);
 
     fb = esp_camera_fb_get();
 
@@ -179,6 +185,8 @@ static esp_err_t pic_handler(httpd_req_t *req){
     }
 
     esp_camera_fb_return(fb);
+
+    Cam.flashLedOff();
 
     int64_t fr_end = esp_timer_get_time();
 
@@ -213,10 +221,10 @@ void initWebServer(){
     .user_ctx  = NULL
   };
 
-  httpd_uri_t servo_uri = {
-    .uri       = "/servo",
+  httpd_uri_t get_uri = {
+    .uri       = "/get",
     .method    = HTTP_GET,
-    .handler   = servo_handler,
+    .handler   = get_handler,
     .user_ctx  = NULL
   };
 
@@ -232,7 +240,7 @@ void initWebServer(){
     httpd_register_uri_handler(httpd, &index_uri);
     httpd_register_uri_handler(httpd, &pic_uri);
     httpd_register_uri_handler(httpd, &set_uri);
-    httpd_register_uri_handler(httpd, &servo_uri);
+    httpd_register_uri_handler(httpd, &get_uri);
   }
 
   config.server_port = 81;

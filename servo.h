@@ -9,6 +9,8 @@
 #ifndef SERVO_H_
 #define SERVO_H_
 
+#define INVERT_SERVO_MOVE
+
 #define SERVO_PWM_CH       4   //PWM Kanal
 #define SERVO_PIN         12   //IO Pin
 
@@ -17,33 +19,48 @@
 #define SERVO_DUTY_MIN  2436UL //PWM Duty bei min. Stellwinkel
 #define SERVO_DUTY_MAX  8526UL //PWM Duty bei max. Stellwinkel
 
-unsigned long servoMoveStartMillis = 0;
-bool          servoPinIsAttached   = false;
 
-void setServoPos(uint8_t deg) {
-  servoMoveStartMillis = millis();
-  uint32_t duty = map(deg, SERVO_DEG_MIN, SERVO_DEG_MAX, SERVO_DUTY_MIN, SERVO_DUTY_MAX);
-  ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
-  servoPinIsAttached = true;
-  ledcWrite(SERVO_PWM_CH, duty);
-}
+class ServoControl {
+private:
+  unsigned long servoMoveStartMillis;
+  bool          servoPinIsAttached;
+  uint8_t       deg_diff;
 
-void disableServo() {
-  if (servoPinIsAttached == true && millis() - servoMoveStartMillis > 1000) {
-    ledcDetachPin(SERVO_PIN);
-    servoPinIsAttached = false;
+public:
+  ServoControl() : servoMoveStartMillis(0), servoPinIsAttached(false), deg_diff(0) {}
+  virtual ~ServoControl() {}
+
+  void setPos(uint8_t deg) {
+    deg_diff = abs(Prefs.getByte(PREFS_KEY_SERVOPOS, 90) - deg);
+    Prefs.putByte(PREFS_KEY_SERVOPOS, deg);
+    servoMoveStartMillis = millis();
+#ifdef INVERT_SERVO_MOVE
+    deg = SERVO_DEG_MAX - deg;
+#endif
+    uint32_t duty = map(deg, SERVO_DEG_MIN, SERVO_DEG_MAX, SERVO_DUTY_MIN, SERVO_DUTY_MAX);
+    ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
+    servoPinIsAttached = true;
+    ledcWrite(SERVO_PWM_CH, duty);
   }
-}
 
-void initServo() {
-  //ledcSetup(2, 50, 16); //channel, freq, resolution
-  //ledcAttachPin(2, 2); // pin, channel
-  ledcSetup(SERVO_PWM_CH, 50, 16);
-  setServoPos(90);
-}
+  void disable() {
+    if (servoPinIsAttached == true && millis() - servoMoveStartMillis > (deg_diff * 6) + 300) {
+      ledcDetachPin(SERVO_PIN);
+      servoPinIsAttached = false;
+    }
+  }
 
+  void init() {
+    //ledcSetup(2, 50, 16); //channel, freq, resolution
+    //ledcAttachPin(2, 2); // pin, channel
+    ledcSetup(SERVO_PWM_CH, 50, 16);
 
+    uint8_t savedServoPos = Prefs.getByte(PREFS_KEY_SERVOPOS, 90);
+    setPos(savedServoPos);
+  }
 
+};
 
+ServoControl Servo;
 
 #endif /* SERVO_H_ */

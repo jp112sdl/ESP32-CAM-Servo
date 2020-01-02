@@ -1,4 +1,5 @@
 #define DEFAULT_FRAMESIZE FRAMESIZE_SXGA
+#define NVS_NAMESPACE     "SETTINGS"
 
 #include <WiFi.h>
 #include <WiFiMulti.h>
@@ -8,14 +9,15 @@
 #include "soc/rtc_cntl_reg.h"
 #include "driver/rtc_io.h"
 #include "esp_http_server.h"
+#include "nvs.h"
 
+#include "prefs.h"
 #include "html.h"
 #include "cam.h"
 #include "servo.h"
 #include "webserver.h"
 #include "ota_srv.h"
 #include "wifi.h"
-
 
 
 void setup() {
@@ -25,11 +27,13 @@ void setup() {
 
   log_i("VER 1.1");
 
+  Prefs.init(NVS_NAMESPACE);
+
   initWifi();
 
-  initCamera();
+  Cam.init();
 
-  initServo();
+  Servo.init();
 
   initWebServer();
 
@@ -42,7 +46,10 @@ void setup() {
 
 
 void loop() {
-  wifiMulti.run();
-  disableServo();
+  if (wifiMulti.run() != WL_CONNECTED) {
+    WiFi.disconnect(false, false);
+    wifiMulti.run();
+  }
+  Servo.disable();
   yield();
 }
