@@ -21,6 +21,48 @@ static esp_err_t index_handler(httpd_req_t *req){
   return res;
 }
 
+static esp_err_t settings_handler(httpd_req_t *req){
+  esp_err_t res = ESP_OK;
+
+  res = httpd_resp_send(req, settings_html, strlen(settings_html));
+  return res;
+}
+
+static esp_err_t status_handler(httpd_req_t *req){
+    static char json_response[1024];
+
+    sensor_t * s = esp_camera_sensor_get();
+    char * p = json_response;
+    *p++ = '{';
+
+    p+=sprintf(p, "\"framesize\":%u,", s->status.framesize);
+    p+=sprintf(p, "\"quality\":%u,", s->status.quality);
+    p+=sprintf(p, "\"brightness\":%d,", s->status.brightness);
+    p+=sprintf(p, "\"contrast\":%d,", s->status.contrast);
+    p+=sprintf(p, "\"saturation\":%d,", s->status.saturation);
+    p+=sprintf(p, "\"sharpness\":%d,", s->status.sharpness);
+    p+=sprintf(p, "\"special_effect\":%u,", s->status.special_effect);
+    p+=sprintf(p, "\"wb_mode\":%u,", s->status.wb_mode);
+    p+=sprintf(p, "\"awb\":%u,", s->status.awb);
+    p+=sprintf(p, "\"awb_gain\":%u,", s->status.awb_gain);
+    p+=sprintf(p, "\"aec\":%u,", s->status.aec);
+    p+=sprintf(p, "\"aec2\":%u,", s->status.aec2);
+    p+=sprintf(p, "\"ae_level\":%d,", s->status.ae_level);
+    p+=sprintf(p, "\"aec_value\":%u,", s->status.aec_value);
+    p+=sprintf(p, "\"agc\":%u,", s->status.agc);
+    p+=sprintf(p, "\"agc_gain\":%u,", s->status.agc_gain);
+    p+=sprintf(p, "\"gainceiling\":%u,", s->status.gainceiling);
+    p+=sprintf(p, "\"raw_gma\":%u,", s->status.raw_gma);
+    p+=sprintf(p, "\"lenc\":%u,", s->status.lenc);
+    p+=sprintf(p, "\"vflip\":%u,", s->status.vflip);
+    p+=sprintf(p, "\"hmirror\":%u", s->status.hmirror);
+    *p++ = '}';
+    *p++ = 0;
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, json_response, strlen(json_response));
+}
+
 static esp_err_t get_handler(httpd_req_t *req){
   esp_err_t res = ESP_OK;
 
@@ -86,6 +128,7 @@ static esp_err_t set_handler(httpd_req_t *req){
    else if (!strcmp(param, "contrast"))       res = s->set_contrast(s, val);
    else if (!strcmp(param, "brightness"))     res = s->set_brightness(s, val);
    else if (!strcmp(param, "saturation"))     res = s->set_saturation(s, val);
+   else if (!strcmp(param, "sharpness"))      res = s->set_sharpness(s, val);
    else if (!strcmp(param, "gainceiling"))    res = s->set_gainceiling(s, (gainceiling_t)val);
    else if (!strcmp(param, "colorbar"))       res = s->set_colorbar(s, val);
    else if (!strcmp(param, "awb"))            res = s->set_whitebal(s, val);
@@ -97,23 +140,20 @@ static esp_err_t set_handler(httpd_req_t *req){
    else if (!strcmp(param, "agc_gain"))       res = s->set_agc_gain(s, val);
    else if (!strcmp(param, "aec_value"))      res = s->set_aec_value(s, val);
    else if (!strcmp(param, "aec2"))           res = s->set_aec2(s, val);
-   else if (!strcmp(param, "dcw"))            res = s->set_dcw(s, val);
-   else if (!strcmp(param, "bpc"))            res = s->set_bpc(s, val);
-   else if (!strcmp(param, "wpc"))            res = s->set_wpc(s, val);
    else if (!strcmp(param, "raw_gma"))        res = s->set_raw_gma(s, val);
    else if (!strcmp(param, "lenc"))           res = s->set_lenc(s, val);
    else if (!strcmp(param, "special_effect")) res = s->set_special_effect(s, val);
    else if (!strcmp(param, "wb_mode"))        res = s->set_wb_mode(s, val);
    else if (!strcmp(param, "ae_level"))       res = s->set_ae_level(s, val);
-   else if (!strcmp(param, "servopos"))       Servo.setPos(atoi(value));
-   else if (!strcmp(param, "flashlight"))     Cam.setFlashActive(atoi(value));
+   else if (!strcmp(param, "servopos"))       res = Servo.setPos(atoi(value));
+   else if (!strcmp(param, "flashlight"))     res = Cam.setFlashActive(atoi(value));
 
    log_i("param = %s, value = %s, res = %u", param, value, res);
   }
 
-  if(res == -1){
-    return httpd_resp_send_500(req);
-  }
+  if(res == -1) return httpd_resp_send_500(req);
+  else if (res != 0xFF) Cam.saveSettings();
+
 
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
   return httpd_resp_send(req, NULL, 0);
@@ -221,6 +261,20 @@ void initWebServer(){
     .user_ctx  = NULL
   };
 
+  httpd_uri_t settings_uri = {
+    .uri       = "/settings",
+    .method    = HTTP_GET,
+    .handler   = settings_handler,
+    .user_ctx  = NULL
+  };
+
+  httpd_uri_t status_uri = {
+      .uri       = "/status",
+      .method    = HTTP_GET,
+      .handler   = status_handler,
+      .user_ctx  = NULL
+  };
+
   httpd_uri_t pic_uri = {
     .uri       = "/pic",
     .method    = HTTP_GET,
@@ -252,6 +306,8 @@ void initWebServer(){
   log_i("Starting web server on port: '%d'", config.server_port);
   if (httpd_start(&httpd, &config) == ESP_OK) {
     httpd_register_uri_handler(httpd, &index_uri);
+    httpd_register_uri_handler(httpd, &settings_uri);
+    httpd_register_uri_handler(httpd, &status_uri);
     httpd_register_uri_handler(httpd, &pic_uri);
     httpd_register_uri_handler(httpd, &set_uri);
     httpd_register_uri_handler(httpd, &get_uri);

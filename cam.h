@@ -36,12 +36,13 @@ public:
   Camera() : use_flashlight(false), setup(true) {}
   virtual ~Camera() {}
 
-  void setFlashActive(bool a) {
+  uint8_t setFlashActive(bool a) {
     use_flashlight = a;
-    Prefs.putByte(PREFS_KEY_USEFLASHLIGHT, use_flashlight);
+    Prefs.putU8(PREFS_KEY_USEFLASHLIGHT, use_flashlight);
     if (use_flashlight == false) {
       digitalWrite(FLASH_LED_PIN, LOW);
     }
+    return 0xFF;
   }
 
   bool getFlashActive() {
@@ -58,6 +59,58 @@ public:
   void flashLedOff() {
     if (use_flashlight == true || setup == true)
       digitalWrite(FLASH_LED_PIN, LOW);
+  }
+
+  void saveSettings() {
+    sensor_t * s = esp_camera_sensor_get();
+    Prefs.putU8 (PREFS_KEY_CAM_FRAMESIZE,      s->status.framesize);
+    Prefs.putU8 (PREFS_KEY_CAM_QUALITY,        s->status.quality);
+    Prefs.putI8 (PREFS_KEY_CAM_BRIGHTNESS,     s->status.brightness);
+    Prefs.putI8 (PREFS_KEY_CAM_CONTRAST,       s->status.contrast);
+    Prefs.putI8 (PREFS_KEY_CAM_SATURATION,     s->status.saturation);
+    Prefs.putU8 (PREFS_KEY_CAM_SPECIAL_EFFECT, s->status.special_effect);
+    Prefs.putU8 (PREFS_KEY_CAM_WBMODE,         s->status.wb_mode);
+    Prefs.putU8 (PREFS_KEY_CAM_AWB,            s->status.awb);
+    Prefs.putU8 (PREFS_KEY_CAM_AWBGAIN,        s->status.awb_gain);
+    Prefs.putU8 (PREFS_KEY_CAM_AEC,            s->status.aec);
+    Prefs.putU8 (PREFS_KEY_CAM_AEC2,           s->status.aec2);
+    Prefs.putI8 (PREFS_KEY_CAM_AELEVEL,        s->status.ae_level);
+    Prefs.putU16(PREFS_KEY_CAM_AECVALUE,       s->status.aec_value);
+    Prefs.putU8 (PREFS_KEY_CAM_AGC,            s->status.agc);
+    Prefs.putU8 (PREFS_KEY_CAM_AGC_GAIN,       s->status.agc_gain);
+    Prefs.putU8 (PREFS_KEY_CAM_GAIN_CEIL,      s->status.gainceiling);
+    Prefs.putU8 (PREFS_KEY_CAM_RAW,            s->status.raw_gma);
+    Prefs.putU8 (PREFS_KEY_CAM_LENC,           s->status.lenc);
+    Prefs.putU8 (PREFS_KEY_CAM_VFLIP,          s->status.vflip);
+    Prefs.putU8 (PREFS_KEY_CAM_HMIRROR,        s->status.hmirror);
+
+    log_i("Camera settings saved to NVS");
+  }
+
+  void loadSettings() {
+    sensor_t * s = esp_camera_sensor_get();
+    s->set_framesize      (s,(framesize_t)Prefs.getU8(PREFS_KEY_CAM_FRAMESIZE    , FRAMESIZE_SXGA));
+    s->set_quality        (s,Prefs.getU8 (PREFS_KEY_CAM_QUALITY                  , 10));
+    s->set_brightness     (s,Prefs.getI8 (PREFS_KEY_CAM_BRIGHTNESS               , 0));
+    s->set_contrast       (s,Prefs.getI8 (PREFS_KEY_CAM_CONTRAST                 , 0));
+    s->set_saturation     (s,Prefs.getI8 (PREFS_KEY_CAM_SATURATION               , 0));
+    s->set_special_effect (s,Prefs.getU8 (PREFS_KEY_CAM_SPECIAL_EFFECT           , 0));
+    s->set_wb_mode        (s,Prefs.getU8 (PREFS_KEY_CAM_WBMODE                   , 0));
+    s->set_whitebal       (s,Prefs.getU8 (PREFS_KEY_CAM_AWB                      , 0));
+    s->set_awb_gain       (s,Prefs.getU8 (PREFS_KEY_CAM_AWBGAIN                  , 0));
+    s->set_aec_value      (s,Prefs.getU8 (PREFS_KEY_CAM_AEC                      , 0));
+    s->set_aec2           (s,Prefs.getU8 (PREFS_KEY_CAM_AEC2                     , 0));
+    s->set_ae_level       (s,Prefs.getI8 (PREFS_KEY_CAM_AELEVEL                  , 0));
+    s->set_aec_value      (s,Prefs.getU16(PREFS_KEY_CAM_AECVALUE                 , 0));
+    s->set_gain_ctrl      (s,Prefs.getU8 (PREFS_KEY_CAM_AGC                      , 1));
+    s->set_agc_gain       (s,Prefs.getU8 (PREFS_KEY_CAM_AGC_GAIN                 , 1));
+    s->set_gainceiling    (s,(gainceiling_t)Prefs.getU8 (PREFS_KEY_CAM_GAIN_CEIL , GAINCEILING_2X));
+    s->set_raw_gma        (s,Prefs.getU8 (PREFS_KEY_CAM_RAW                      , 0));
+    s->set_lenc           (s,Prefs.getU8 (PREFS_KEY_CAM_LENC                     , 1));
+    s->set_vflip          (s,Prefs.getU8 (PREFS_KEY_CAM_VFLIP                    , 0));
+    s->set_hmirror        (s,Prefs.getU8 (PREFS_KEY_CAM_HMIRROR                  , 0));
+
+    log_i("Camera settings loaded from NVS");
   }
 
   void init() {
@@ -83,8 +136,8 @@ public:
     config.pin_reset    = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
     config.pixel_format = PIXFORMAT_JPEG;
-    config.frame_size   = DEFAULT_FRAMESIZE;
-    config.jpeg_quality = 8;
+    config.frame_size   = FRAMESIZE_SXGA;
+    config.jpeg_quality = 10;
     config.fb_count     = 2;
 
     esp_err_t err = esp_camera_init(&config);
@@ -93,12 +146,11 @@ public:
       ESP.restart();
     }
 
-    sensor_t * s = esp_camera_sensor_get();
-    s->set_brightness(s,1);
+    loadSettings();
 
     pinMode(FLASH_LED_PIN, OUTPUT);
 
-    setFlashActive(Prefs.getByte(PREFS_KEY_USEFLASHLIGHT, 0));
+    setFlashActive(Prefs.getU8(PREFS_KEY_USEFLASHLIGHT, 0));
 
     log_i("Flash LED check...");
     flashLedOn();

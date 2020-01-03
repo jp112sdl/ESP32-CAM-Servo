@@ -30,9 +30,9 @@ public:
   ServoControl() : servoMoveStartMillis(0), servoPinIsAttached(false), deg_diff(0) {}
   virtual ~ServoControl() {}
 
-  void setPos(uint8_t deg) {
+  uint8_t setPos(uint8_t deg) {
     deg_diff = abs(getPos() - deg);
-    Prefs.putByte(PREFS_KEY_SERVOPOS, deg);
+    Prefs.putU8(PREFS_KEY_SERVOPOS, deg);
     servoMoveStartMillis = millis();
 #ifdef INVERT_SERVO_MOVE
     deg = SERVO_DEG_MAX - deg;
@@ -41,10 +41,11 @@ public:
     ledcAttachPin(SERVO_PIN, SERVO_PWM_CH);
     servoPinIsAttached = true;
     ledcWrite(SERVO_PWM_CH, duty);
+    return 0xFF;
   }
 
   uint8_t getPos() {
-    return Prefs.getByte(PREFS_KEY_SERVOPOS, 90);
+    return Prefs.getU8(PREFS_KEY_SERVOPOS, 90);
   }
 
   void disable() {

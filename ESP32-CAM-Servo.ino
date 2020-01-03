@@ -1,4 +1,3 @@
-#define DEFAULT_FRAMESIZE FRAMESIZE_SXGA
 #define NVS_NAMESPACE     "SETTINGS"
 
 #include <WiFiMulti.h>
