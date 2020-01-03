@@ -15,13 +15,7 @@
 #ifndef HTML_H_
 #define HTML_H_
 
-const char settings_html[] PROGMEM = R"=====(
-<!doctype html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>ESP32 OV2460</title>
+const char css[] PROGMEM = R"=====(
         <style>
             body {
                 font-family: Arial,Helvetica,sans-serif;
@@ -348,6 +342,20 @@ const char settings_html[] PROGMEM = R"=====(
                 display: none
             }
         </style>
+)=====";
+
+
+const char settings_html_pre_css[] PROGMEM = R"=====(
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>ESP32-CAM-Servo</title>
+)=====";
+
+const char settings_html_post_css[] PROGMEM = R"=====(
+
     </head>
     <body>
         <section class="main">
@@ -676,96 +684,39 @@ document.addEventListener('DOMContentLoaded', function (event) {
 
 )=====";
 
-const char index_html[] PROGMEM = R"=====(
+const char index_html_pre_css[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <style>
-    body {
-      font-family: Arial,Helvetica,sans-serif;
-      text-align: center;
-      background: #181818;
-      color: #EFEFEF;
-      font-size: 16px
-    }
-    .vert {
-      margin-bottom: 10%;
-    }
-    .hori {
-      margin-bottom: 0%;
-    }
-    .range-slider {
-      width: 300px;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      -webkit-transition: .4s;
-      transition: .4s;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      -webkit-transition: .4s;
-      transition: .4s;
-    }
-    input:checked+.slider {
-      background-color: #2196F3;
-    }
-    input:focus+.slider {
-      box-shadow: 0 0 1px #2196F3;
-    }
-    input:checked+.slider:before {
-      -webkit-transform: translateX(26px);
-      -ms-transform: translateX(26px);
-      transform: translateX(26px);
-    }
-    .slider.round {
-      border-radius: 34px;
-    }
-    .slider.round:before {
-      border-radius: 50%;
-    }
-  </style>
+)=====";
+
+const char index_html_post_css[] PROGMEM = R"=====(
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 </head>
 
 <body>
   <div>
-    <img src="/pic" id="picimg" width="70%">
+    <img src="/pic" id="picimg" width="80%">
   </div>
   <div>
-    <p>
+    <div class="input-group" id="servoSlider-group">
       <button id="reloadBtn" onclick="location.reload();">Aktualisieren</button>
       <button id="srcBtn" onclick="location.href='?show=video';">Video-Ansicht</button>
-      <label class="switch"><input id="flashlight" type="checkbox" onchange="SetFlashlight(this.checked)"><span class="slider round"></span></label>
-      <input type="range" min="0" max="180" value="90" class="range-slider" id="servoSlider" onchange="SetServoPos(this.value)" />
       <button id="settingsBtn" onclick="location.href='/settings';">Bildeinstellungen</button>
-    </p>
+    </div>
+    <div class="input-group" id="flashswitch-group">
+      <label for="flashlight">Blitzlicht</label>
+      <label class="switch"><input id="flashlight" type="checkbox" onchange="SetFlashlight(this.checked)"><span class="slider round"></span></label>
+    </div>
+    <div class="input-group" id="servoSlider-group">
+      <label for="servoSlider">Schwenk</label>
+      <div class="range-min">0&deg;</div>
+      <input type="range" id="servoSlider" min="0" max="180" value="0" class="default-action" onchange="SetServoPos(this.value)">
+      <div class="range-max">90&deg;</div>
+    </div>
   </div>
   <script>
 
@@ -829,7 +780,6 @@ const char index_html[] PROGMEM = R"=====(
     console.log(queryStr);
     if (queryStr === "?show=video") {
       reloadBtn.style.display = "none";
-      // Warum mit FQDN und nicht einfach "/vid" ?
       picimg.src = "http://" + window.location.hostname + ":81/vid";
       srcBtn.innerHTML = "Bild-Ansicht";
       srcBtn.setAttribute("onClick", "location.href='?show=picture';");

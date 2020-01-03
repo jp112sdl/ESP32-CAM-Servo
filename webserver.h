@@ -17,14 +17,25 @@ httpd_handle_t vid_httpd = NULL;
 static esp_err_t index_handler(httpd_req_t *req){
   esp_err_t res = ESP_OK;
 
-  res = httpd_resp_send(req, index_html, strlen(index_html));
+  std::string s;
+  s.append(index_html_pre_css);
+  s.append(css);
+  s.append(index_html_post_css);
+
+  res = httpd_resp_send(req, s.c_str(), s.size());
   return res;
 }
 
 static esp_err_t settings_handler(httpd_req_t *req){
   esp_err_t res = ESP_OK;
 
-  res = httpd_resp_send(req, settings_html, strlen(settings_html));
+  std::string s;
+  s.append(settings_html_pre_css);
+  s.append(css);
+  s.append(settings_html_post_css);
+
+  res = httpd_resp_send(req, s.c_str(), s.size());
+
   return res;
 }
 
