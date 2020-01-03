@@ -171,7 +171,7 @@ static esp_err_t vid_handler(httpd_req_t *req) {
   if(res != ESP_OK){
     return res;
   }
-
+  log_i("opening vid_handler for streaming");
   while(true){
     Cam.flashLedOn();
     fb = esp_camera_fb_get();

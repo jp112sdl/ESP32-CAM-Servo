@@ -685,7 +685,11 @@ const char index_html[] PROGMEM = R"=====(
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <style>
     body {
+      font-family: Arial,Helvetica,sans-serif;
       text-align: center;
+      background: #181818;
+      color: #EFEFEF;
+      font-size: 16px
     }
     .vert {
       margin-bottom: 10%;
