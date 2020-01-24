@@ -689,7 +689,7 @@ const char index_html_pre_css[] PROGMEM = R"=====(
 <html lang="en">
 
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 )=====";
 
@@ -699,9 +699,7 @@ const char index_html_post_css[] PROGMEM = R"=====(
 
 <body>
   <div>
-    <img src="/pic" id="picimg" width="80%">
-  </div>
-  <div>
+    <div><img src="/pic" id="picimg" width="100%"></div>
     <div class="input-group" id="servoSlider-group">
       <button id="reloadBtn" onclick="location.reload();">Aktualisieren</button>
       <button id="srcBtn" onclick="location.href='?show=video';">Video-Ansicht</button>
